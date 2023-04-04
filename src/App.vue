@@ -3,7 +3,6 @@ import { reactive, ref } from 'vue'
 import { ElNotification } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import request from './utils/request'
-import { fa } from 'element-plus/es/locale'
 const loginForm = ref<FormInstance>()
 
 const info = reactive({
@@ -36,12 +35,20 @@ const rules = reactive<FormRules>({
 // 获取验证码
 const getVerifyCode = () => {
   info.verifyLoading = true
-  request('https://api.wangyangyang.vip').then((r) => {
-    ElNotification({
-      title: 'Success',
-      message: '验证码已发送，请查看邮箱✨',
-      type: 'success'
-    })
+  request(`https://api.wangyangyang.vip/getVerifyCode?email=${info.email}`).then((r: any) => {
+    if (r?.status) {
+      ElNotification({
+        title: 'Success',
+        message: '验证码已发送，请查看邮箱✨',
+        type: 'success'
+      })
+    } else {
+      ElNotification({
+        title: 'Error',
+        message: '验证码发送失败，请联系管理员😥',
+        type: 'error'
+      })
+    }
     let tid = setTimeout(() => {
       info.verifyLoading = false
       clearTimeout(tid)
@@ -55,15 +62,23 @@ const submit = (formEl: FormInstance | undefined) => {
   info.loading = true
   formEl.validate((valid) => {
     if (valid) {
-      request('https://api.wangyangyang.vip', {}, 'POST', {
+      request('https://api.wangyangyang.vip/register', {}, 'POST', {
         username: info.email,
-        password: info.password
+        password: info.password,
+        verifyCode: info.verifyCode
       }).then((r: any) => {
         if (r?.status) {
           ElNotification({
             title: 'Success',
             message: '注册成功，正在跳转到umami🎉',
             type: 'success'
+          })
+          window.location.href = '//umami.wangyangyang.vip'
+        } else {
+          ElNotification({
+            title: 'Error',
+            message: r.msg,
+            type: 'error'
           })
         }
       })
@@ -98,7 +113,7 @@ const submit = (formEl: FormInstance | undefined) => {
           class="verify"
           type="primary"
           @click="getVerifyCode()"
-          :loading="info.verifyLoading"
+          :disabled="info.verifyLoading"
         >
           获取验证码
         </el-button>
